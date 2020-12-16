@@ -4,6 +4,6 @@ source ./.lib.bash
 while IFS=$'\t' read -r pck url cmd; do
   [ -d "./packages/$pck" ] || ./load "$pck"
   lib::mssg "building $pck with '$cmd'"
-  (cd "packages/$pck" && $cmd) > .log 2>&1 || lib::fail
+  (cd "packages/$pck" && eval $cmd) > .log 2>&1 || lib::fail
   lib::succ
 done < <(lib::get_packages "$@")
