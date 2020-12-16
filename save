@@ -4,12 +4,12 @@ source ./.lib.bash
 mkdir -p "./patches"
 while IFS=$'\t' read -r pck url cmd; do
   [ ! -f "packages/$pck" ] || continue
-  arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
+  arr=${url##*/}; tmp=$(mktemp -d)
   [ -f "./.cache/$arr" ] || ./download "$pck"
   lib::mssg "extracting $pck to $tmp"
   tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
   lib::succ && lib::mssg "saving $pck to ./.patches/$pck.patch"
   (cd "packages/$pck" &&
-    diff -Naru "$tmp/$dcm" . > "../../.patches/$pck.patch") || true
+    diff -Naru "$tmp/"* . > "../../.patches/$pck.patch") || true
   lib::succ && rm -r "$tmp"
 done < <(lib::get_packages "$@")
