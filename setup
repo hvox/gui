@@ -1,22 +1,12 @@
 #!/bin/bash
 source ./.lib.bash
 
-download() {
-  mkdir -p "./.cache"
-  local pck url cmd arr
-  while IFS=$'\t' read -r pck url cmd; do
-    lib::mssg "downloading $pck from $url"
-    arr=${url##*/}; wget -q "$url" -O "./.cache/$arr" || lib::fail
-    lib::succ
-  done < <(lib::get_packages "$@")
-}
-
 load() {
   mkdir -p "./packages"
   local pck url cmd arr tmp dcm
   while IFS=$'\t' read -r pck url cmd; do
     arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
-    [ -f "./.cache/$arr" ] || download "$pck"
+    [ -f "./.cache/$arr" ] || ./download "$pck"
     lib::mssg "extracting $pck to $tmp"
     tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
     lib::succ && lib::mssg "loading $pck using ./.patches/$pck"
@@ -37,7 +27,7 @@ save() {
   while IFS=$'\t' read -r pck url cmd; do
     [ ! -f "packages/$pck" ] || continue
     arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
-    [ -f "./.cache/$arr" ] || download "$pck"
+    [ -f "./.cache/$arr" ] || ./download "$pck"
     lib::mssg "extracting $pck to $tmp"
     tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
     lib::succ && lib::mssg "saving $pck to ./.patches/$pck"

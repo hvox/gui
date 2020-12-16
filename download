@@ -1,0 +1,9 @@
+#!/bin/bash
+source ./.lib.bash
+
+mkdir -p "./.cache"
+while IFS=$'\t' read -r pck url cmd; do
+  lib::mssg "downloading $pck from $url"
+  arr=${url##*/}; wget -q "$url" -O "./.cache/$arr" || lib::fail
+  lib::succ
+done < <(lib::get_packages "$@")
