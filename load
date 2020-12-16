@@ -1,0 +1,15 @@
+#!/bin/bash
+source ./.lib.bash
+
+mkdir -p "./packages"
+while IFS=$'\t' read -r pck url cmd; do
+  arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
+  [ -f "./.cache/$arr" ] || ./download "$pck"
+  lib::mssg "extracting $pck to $tmp"
+  tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
+  lib::succ && lib::mssg "loading $pck using ./.patches/$pck"
+  rm -rf "./packages/$pck" && mv "$tmp/$dcm" "./packages/$pck"
+  [ ! -f ".patches/$pck" ] || (
+    cd "packages/$pck" && patch -sp0 < "../../.patches/$pck" ) || lib::fail
+  lib::succ && rm -r "$tmp"
+done < <(lib::get_packages "$@")

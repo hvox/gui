@@ -1,22 +1,6 @@
 #!/bin/bash
 source ./.lib.bash
 
-load() {
-  mkdir -p "./packages"
-  local pck url cmd arr tmp dcm
-  while IFS=$'\t' read -r pck url cmd; do
-    arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
-    [ -f "./.cache/$arr" ] || ./download "$pck"
-    lib::mssg "extracting $pck to $tmp"
-    tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
-    lib::succ && lib::mssg "loading $pck using ./.patches/$pck"
-    rm -rf "./packages/$pck" && mv "$tmp/$dcm" "./packages/$pck"
-    [ ! -f ".patches/$pck" ] || (
-      cd "packages/$pck" && patch -sp0 < "../../.patches/$pck" ) || lib::fail
-    lib::succ && rm -r "$tmp"
-  done < <(lib::get_packages "$@")
-}
-
 clear() {
   rm -rf .cache .log packages
 }
@@ -40,7 +24,7 @@ save() {
 setup() {
   local pck url cmd arr
   while IFS=$'\t' read -r pck url cmd; do
-    [ -d "./packages/$pck" ] || load "$pck"
+    [ -d "./packages/$pck" ] || ./load "$pck"
     lib::mssg "building $pck with '$cmd'"
     (cd "packages/$pck" && $cmd) > .log 2>&1
     lib::succ
