@@ -1,34 +1,9 @@
 #!/bin/bash
 source ./.lib.bash
 
-clear() {
-  rm -rf .cache .log packages
-}
-
-save() {
-  mkdir -p "./patches"
-  local pck url cmd arr tmp dcm
-  while IFS=$'\t' read -r pck url cmd; do
-    [ ! -f "packages/$pck" ] || continue
-    arr=${url##*/}; tmp=$(mktemp -d); dcm="${arr%%.tar*}"
-    [ -f "./.cache/$arr" ] || ./download "$pck"
-    lib::mssg "extracting $pck to $tmp"
-    tar -xf "./.cache/$arr" --directory "$tmp" || lib::fail
-    lib::succ && lib::mssg "saving $pck to ./.patches/$pck"
-    (cd "packages/$pck" &&
-      diff -Naru "$tmp/$dcm" . > "../../.patches/$pck") || true
-    lib::succ && rm -r "$tmp"
-  done < <(lib::get_packages "$@")
-}
-
-setup() {
-  local pck url cmd arr
-  while IFS=$'\t' read -r pck url cmd; do
-    [ -d "./packages/$pck" ] || ./load "$pck"
-    lib::mssg "building $pck with '$cmd'"
-    (cd "packages/$pck" && $cmd) > .log 2>&1
-    lib::succ
-  done < <(lib::get_packages "$@")
-}
-
-setup "$@"
+while IFS=$'\t' read -r pck url cmd; do
+  [ -d "./packages/$pck" ] || ./load "$pck"
+  lib::mssg "building $pck with '$cmd'"
+  (cd "packages/$pck" && $cmd) > .log 2>&1
+  lib::succ
+done < <(lib::get_packages "$@")
