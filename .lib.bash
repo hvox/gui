@@ -15,8 +15,8 @@ lib::fail() {
 
 lib::get_packages() {
   local pck url cmd pcks=("$@")
-  while IFS=$'\t' read -r pck url cmd; do
+  sed 1d packages.tsv | while IFS=$'\t' read -r pck url cmd; do
     (for p in "${pcks[@]}"; do [[ "$p" == "$pck" ]] && exit 0; done) &&
       echo "$pck"$'\t'"$url"$'\t'"$cmd"
-  done < packages.tsv
+  done
 }
