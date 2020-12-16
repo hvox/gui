@@ -1,0 +1,116 @@
+diff -Naru /tmp/tmp.JcBbzfEDIL/dwm-6.2/config.def.h ./config.def.h
+--- /tmp/tmp.JcBbzfEDIL/dwm-6.2/config.def.h	2019-02-02 15:55:28.000000000 +0300
++++ ./config.def.h	2020-12-16 20:29:08.163829733 +0300
+@@ -5,8 +5,8 @@
+ static const unsigned int snap      = 32;       /* snap pixel */
+ static const int showbar            = 1;        /* 0 means no bar */
+ static const int topbar             = 1;        /* 0 means bottom bar */
+-static const char *fonts[]          = { "monospace:size=10" };
+-static const char dmenufont[]       = "monospace:size=10";
++static const char *fonts[]          = { "gohu gohufont:pixelsize=11" };
++static const char dmenufont[]       = "gohu gohufont:pixelsize=11";
+ static const char col_gray1[]       = "#222222";
+ static const char col_gray2[]       = "#444444";
+ static const char col_gray3[]       = "#bbbbbb";
+@@ -16,6 +16,7 @@
+ 	/*               fg         bg         border   */
+ 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
+ 	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
++	[SchemeTitle]  = { col_gray4, col_gray1,  col_gray2 },
+ };
+ 
+ /* tagging */
+@@ -32,7 +33,7 @@
+ };
+ 
+ /* layout(s) */
+-static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
++static const float mfact     = 0.5625; /* factor of master area size [0.05..0.95] */
+ static const int nmaster     = 1;    /* number of clients in master area */
+ static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+ 
+@@ -44,7 +45,7 @@
+ };
+ 
+ /* key definitions */
+-#define MODKEY Mod1Mask
++#define MODKEY Mod4Mask
+ #define TAGKEYS(KEY,TAG) \
+ 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
+ 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
+@@ -72,10 +73,11 @@
+ 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
+ 	{ MODKEY,                       XK_Return, zoom,           {0} },
+ 	{ MODKEY,                       XK_Tab,    view,           {0} },
+-	{ MODKEY|ShiftMask,             XK_c,      killclient,     {0} },
++	{ MODKEY,                       XK_q,      killclient,     {0} },
+ 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
+ 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+ 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
++	{ MODKEY,                       XK_s,      fullscreen,     {0} },
+ 	{ MODKEY,                       XK_space,  setlayout,      {0} },
+ 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
+ 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
+diff -Naru /tmp/tmp.JcBbzfEDIL/dwm-6.2/dwm.c ./dwm.c
+--- /tmp/tmp.JcBbzfEDIL/dwm-6.2/dwm.c	2019-02-02 15:55:28.000000000 +0300
++++ ./dwm.c	2020-12-16 19:32:18.490749246 +0300
+@@ -59,7 +59,7 @@
+ 
+ /* enums */
+ enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
+-enum { SchemeNorm, SchemeSel }; /* color schemes */
++enum { SchemeNorm, SchemeSel, SchemeTitle }; /* color schemes */
+ enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
+        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+        NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
+@@ -199,6 +199,7 @@
+ static void setclientstate(Client *c, long state);
+ static void setfocus(Client *c);
+ static void setfullscreen(Client *c, int fullscreen);
++static void fullscreen(const Arg *arg);
+ static void setlayout(const Arg *arg);
+ static void setmfact(const Arg *arg);
+ static void setup(void);
+@@ -730,7 +731,7 @@
+ 
+ 	if ((w = m->ww - sw - x) > bh) {
+ 		if (m->sel) {
+-			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
++			drw_setscheme(drw, scheme[m == selmon ? SchemeTitle : SchemeNorm]);
+ 			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+ 			if (m->sel->isfloating)
+ 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
+@@ -1282,6 +1283,13 @@
+ 	c->oldw = c->w; c->w = wc.width = w;
+ 	c->oldh = c->h; c->h = wc.height = h;
+ 	wc.border_width = c->bw;
++	if (((nexttiled(c->mon->clients) == c && !nexttiled(c->next))
++	    || &monocle == c->mon->lt[c->mon->sellt]->arrange)
++	    && !c->isfullscreen && !c->isfloating) {
++		c->w = wc.width += c->bw * 2;
++		c->h = wc.height += c->bw * 2;
++		wc.border_width = 0;
++	}
+ 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
+ 	configure(c);
+ 	XSync(dpy, False);
+@@ -1497,6 +1505,19 @@
+ 	}
+ }
+ 
++Layout *last_layout;
++void
++fullscreen(const Arg *arg)
++{
++	if (selmon->showbar) {
++		for(last_layout = (Layout *)layouts; last_layout != selmon->lt[selmon->sellt]; last_layout++);
++		setlayout(&((Arg) { .v = &layouts[2] }));
++	} else {
++		setlayout(&((Arg) { .v = last_layout }));
++	}
++	togglebar(arg);
++}
++
+ void
+ setlayout(const Arg *arg)
+ {
