@@ -1,3 +1,4 @@
+package	url of source	command for installation
 dwm	https://dl.suckless.org/dwm/dwm-6.2.tar.gz	make install PREFIX=~/.local
 st	https://dl.suckless.org/st/st-0.8.4.tar.gz	make install PREFIX=~/.local
 dmenu	https://dl.suckless.org/tools/dmenu-5.0.tar.gz	make install PREFIX=~/.local
